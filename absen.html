@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0f2a66">
+<title>Absen JALUR</title>
+<link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<style>
+:root{--bg:#eaf0fb;--sf:#fff;--tx:#14213d;--mu:#63708c;--bd:#d6dff0;--ac:#0f2a66;--acs:#dbe5fa;--ok:#17803d;--okb:#e3f5ea;--er:#c62828;box-sizing:border-box}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12151c;--sf:#1b202b;--tx:#e8ebf2;--mu:#8e97ab;--bd:#2c3342;--ac:#6ea0ff;--acs:#202c47;--ok:#4fd18b;--okb:#17301f;--er:#ff7a7a;color-scheme:dark}}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100%;padding:calc(14px + env(safe-area-inset-top,0px)) 14px calc(24px + env(safe-area-inset-bottom,0px))}
+.w{max-width:460px;margin:0 auto}
+.hd{display:flex;gap:12px;align-items:center;margin:4px 0 16px}
+.hd img{width:44px;height:44px;border-radius:11px}.hd b{font-size:20px;letter-spacing:.04em;display:block;line-height:1.1}.hd span{font-size:13px;color:var(--mu)}
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--acs);padding:4px;border-radius:12px;margin-bottom:14px}
+.sg button{border:0;background:transparent;color:var(--ac);font:inherit;font-weight:600;padding:10px;border-radius:9px;cursor:pointer}
+.sg button.on{background:var(--ac);color:#fff}
+@media(prefers-color-scheme:dark){.sg button.on{color:#0b1020}}
+.cd{background:var(--sf);border:1px solid var(--bd);border-radius:16px;padding:16px}
+label{display:block;font-size:13px;color:var(--mu);margin-bottom:12px}
+input,textarea{display:block;width:100%;margin-top:4px;padding:12px;border:1px solid var(--bd);border-radius:10px;font:inherit;background:var(--bg);color:var(--tx)}
+textarea{resize:vertical;min-height:72px}
+.sb{width:100%;padding:14px;border:0;border-radius:12px;background:var(--ac);color:#fff;font:inherit;font-weight:700;cursor:pointer;margin-top:4px}
+@media(prefers-color-scheme:dark){.sb{color:#0b1020}}
+.sb:disabled{opacity:.6;cursor:wait}
+.hn{font-size:12.5px;color:var(--mu);margin:10px 0 0}
+.er{min-height:20px;color:var(--er);font-size:14px;margin:0 0 8px}
+.ok{background:var(--okb);border:1px solid var(--ok);color:var(--tx);border-radius:16px;padding:18px;text-align:center}
+.ok b{display:block;font-size:20px;color:var(--ok);margin-bottom:4px}
+.ok .j{font-size:34px;font-weight:800;margin:6px 0}
+.ok button{margin-top:12px;border:1px solid var(--bd);background:var(--sf);color:var(--tx);font:inherit;padding:10px 18px;border-radius:10px;cursor:pointer}
+.wl{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}.wl b{font-size:17px}.wl button{border:0;background:transparent;color:var(--ac);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer;padding:4px}
+.hp{position:absolute;left:-9999px;opacity:0;height:0;width:0}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="w">
+  <div class="hd"><img src="img/logo.jpg" alt="Logo"><div><b>JALUR</b><span>Absen tim harian</span></div></div>
+
+  <form class="cd" id="lg" autocomplete="off">
+    <label>Nama<input id="ln" placeholder="Tulis nama Anda" required autocapitalize="words" maxlength="60"></label>
+    <div class="er" id="le" role="alert"></div>
+    <button class="sb" id="lb" type="submit">Masuk</button>
+    <p class="hn">Gunakan nama yang sama dengan yang terdaftar di JALUR. Kalau ditolak, hubungi admin.</p>
+  </form>
+
+  <div id="fx" hidden>
+    <div class="wl"><b id="hi"></b><small id="sl" style="color:var(--mu)"></small></div>
+    <div class="sg" role="tablist"><button type="button" id="m1" class="on">Absen harian</button><button type="button" id="m2">Lemburan</button></div>
+    <form class="cd" id="f" autocomplete="off">
+      <input class="hp" name="web" id="web" tabindex="-1" aria-hidden="true">
+      <label>Project<input id="proyek" list="dp" placeholder="Nama project" required maxlength="80"></label>
+      <label id="lj" hidden>Jam lembur<input id="lama" type="number" inputmode="decimal" min="0.5" max="16" step="0.5" placeholder="Contoh: 2"></label>
+      <label>Kegiatan<textarea id="keg" placeholder="Apa yang dikerjakan" required maxlength="200"></textarea></label>
+      <div class="er" id="er" role="alert"></div>
+      <button class="sb" id="sb" type="submit">Absen masuk</button>
+      <p class="hn">Jam dicatat otomatis oleh sistem. Lokasi ikut tercatat bila Anda mengizinkan, dan boleh dilewati.</p>
+    </form>
+    <datalist id="dp"></datalist>
+  </div>
+
+  <div class="ok" id="ok" hidden>
+    <b id="ot">Absen tersimpan</b>
+    <div class="j" id="oj"></div>
+    <div id="on"></div>
+    <div class="hn" id="ol"></div>
+    <button type="button" id="ob">Selesai</button>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script>
+(function () {
+  "use strict";
+  var C = window.JALUR_CONFIG || {}, mode = 1, token = "", expAt = 0, tick = null, $ = function (id) { return document.getElementById(id); };
+
+  function post(action, body) {
+    if (!C.GAS_URL) return Promise.reject(new Error("Server belum disetel"));
+    var ctl = window.AbortController ? new AbortController() : null, t = setTimeout(function () { if (ctl) ctl.abort(); }, 30000);
+    return fetch(C.GAS_URL, {
+      method: "POST", redirect: "follow", headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(Object.assign({ action: action }, body || {})), signal: ctl ? ctl.signal : undefined
+    }).then(function (r) { clearTimeout(t); if (!r.ok) throw new Error("Server menjawab " + r.status); return r.json(); });
+  }
+  function netErr(e) {
+    if (e && e.name === "AbortError") return "Koneksi lambat. Coba lagi.";
+    if (e && e.message === "Failed to fetch") return "Tidak ada koneksi internet. Coba lagi.";
+    return (e && e.message) || "Terjadi kesalahan";
+  }
+
+  // ----- sesi 30 menit: hanya di memori halaman (tidak disimpan di HP) -----
+  function stopTimer() { if (tick) { clearInterval(tick); tick = null; } }
+  function fmt(ms) { var s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2); }
+  function check() {
+    if (!token) return;
+    var left = expAt - Date.now();
+    if (left <= 0) { showLogin("Sesi 30 menit habis. Silakan masuk lagi."); return; }
+    $("sl").textContent = "Sesi berakhir " + fmt(left);
+  }
+  function startTimer(sec) { expAt = Date.now() + sec * 1000; stopTimer(); check(); tick = setInterval(check, 1000); }
+  document.addEventListener("visibilitychange", check);
+
+  function showLogin(msg) {
+    stopTimer(); token = ""; expAt = 0;
+    $("fx").hidden = true; $("ok").hidden = true; $("lg").hidden = false;
+    $("ln").value = ""; $("keg").value = ""; $("lama").value = ""; $("er").textContent = "";
+    $("le").textContent = msg || "";
+    setTimeout(function () { $("ln").focus(); }, 50);
+  }
+  function showForm(j) {
+    token = j.token;
+    var d = $("dp"); d.textContent = "";
+    (j.project || []).forEach(function (v) { var o = document.createElement("option"); o.value = v; d.appendChild(o); });
+    $("hi").textContent = "Halo, " + j.nama;
+    $("lg").hidden = true; $("ok").hidden = true; $("fx").hidden = false;
+    try { $("proyek").value = localStorage.getItem("absen_proyek") || ""; } catch (e) {}
+    startTimer(j.exp || 1800);
+  }
+
+  $("lg").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var n = $("ln").value.trim(), b = $("lb");
+    if (n.length < 2) { $("le").textContent = "Tulis nama Anda."; return; }
+    b.disabled = true; b.textContent = "Memeriksa…"; $("le").textContent = "";
+    post("absenMasuk", { nama: n }).then(function (j) {
+      if (!j.ok || !j.token) throw new Error(j.error || "Nama tidak terdaftar");
+      showForm(j);
+    }).catch(function (e) { $("le").textContent = netErr(e); })
+      .then(function () { b.disabled = false; b.textContent = "Masuk"; });
+  });
+
+  // Bersihkan nama yang pernah tersimpan di HP dari versi sebelumnya
+  try { localStorage.removeItem("absen_nama"); } catch (e) {}
+  showLogin("");
+
+  function setMode(m) {
+    mode = m;
+    $("m1").classList.toggle("on", m === 1); $("m2").classList.toggle("on", m === 2);
+    $("lj").hidden = m === 1; $("lama").required = m === 2;
+    $("sb").textContent = m === 1 ? "Absen masuk" : "Simpan lembur";
+    $("er").textContent = "";
+  }
+  $("m1").addEventListener("click", function () { setMode(1); });
+  $("m2").addEventListener("click", function () { setMode(2); });
+
+  function lokasi() {
+    return new Promise(function (res) {
+      if (!navigator.geolocation) return res(null);
+      navigator.geolocation.getCurrentPosition(
+        function (p) { res({ lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy }); },
+        function () { res(null); },
+        { enableHighAccuracy: true, timeout: 7000, maximumAge: 60000 });
+    });
+  }
+
+  $("f").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var b = $("sb"), er = $("er"); er.textContent = "";
+    if (!token || expAt - Date.now() <= 0) { showLogin("Sesi 30 menit habis. Silakan masuk lagi."); return; }
+    var d = { token: token, proyek: $("proyek").value.trim(), kegiatan: $("keg").value.trim(), web: $("web").value };
+    if (!d.proyek || !d.kegiatan) { er.textContent = "Lengkapi project dan kegiatan."; return; }
+    if (mode === 2) {
+      d.lama = $("lama").value;
+      var n = Number(String(d.lama).replace(",", "."));
+      if (!isFinite(n) || n <= 0 || n > 16) { er.textContent = "Isi jam lembur antara 0,5 sampai 16."; return; }
+    }
+    b.disabled = true; b.textContent = "Mengirim…";
+    lokasi().then(function (l) {
+      if (l) { d.lat = l.lat; d.lng = l.lng; d.acc = l.acc; }
+      return post(mode === 1 ? "absenKirim" : "absenLembur", d);
+    }).then(function (j) {
+      if (!j.ok) { var e = new Error(j.error || "Gagal menyimpan"); e.keluar = j.code === "nama" || j.code === "sesi"; throw e; }
+      try { localStorage.setItem("absen_proyek", d.proyek); } catch (x) {}
+      $("ot").textContent = j.sudah ? (mode === 1 ? "Anda sudah absen hari ini" : "Lembur ini sudah tercatat") : (mode === 1 ? "Absen tersimpan" : "Lembur tersimpan");
+      $("oj").textContent = (j.jam || "") + " WIB";
+      $("on").textContent = j.nama || "";
+      $("ol").textContent = j.sudah ? "" : (j.lokasi ? "Lokasi tercatat" : "Tanpa lokasi");
+      $("fx").hidden = true; $("ok").hidden = false;
+      $("keg").value = ""; $("lama").value = "";
+    }).catch(function (e) {
+      if (e && e.keluar) showLogin(e.message); else er.textContent = netErr(e);
+    }).then(function () { b.disabled = false; b.textContent = mode === 1 ? "Absen masuk" : "Simpan lembur"; });
+  });
+
+  $("ob").addEventListener("click", function () { $("ok").hidden = true; $("fx").hidden = false; });
+})();
+</script>
+</body>
+</html>
