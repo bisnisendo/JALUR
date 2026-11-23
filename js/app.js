@@ -455,9 +455,10 @@ S.sj=S.sj.map(r=>r.items?r:{id:uid(),no:r.no,tgl:r.tgl,proyek:r.project==="Umum"
 let sjf=null,sjei=null;
 const newSJ=()=>({tgl:today(),proyek:"",alamat:"",penerima:"",driver:"",kendaraan:"",catatan:"",items:[{},{},{}]});
 const sjNo=tgl=>{const y=(tgl||today()).slice(0,4);const mx=Math.max(0,...S.sj.filter(r=>(r.no||"").startsWith("SJ/"+y+"/")).map(r=>+r.no.split("/")[2]||0));return "SJ/"+y+"/"+String(mx+1).padStart(3,"0")};
+function sjCur(){const f=sjf||newSJ(),its=(f.items||[]).filter(x=>(x.nama||"").trim()||String(x.qty==null?"":x.qty).trim()||(x.satuan||"").trim()||(x.ket||"").trim()),c=sjei?S.sj.find(r=>r.id===sjei):null;return Object.assign({},f,{no:c?c.no:sjNo(f.tgl),items:its.length?its:Array.from({length:10},()=>({}))})}
 function sjPage(){if(!sjf)sjf=newSJ();const f=sjf,L=(l,k,x)=>`<label>${l}<input data-sf="${k}" value="${qa(f[k]||"")}" ${x||""}></label>`;
 const cur0=sjei?S.sj.find(r=>r.id===sjei):null;
-return `<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-weight:800;color:var(--ac);margin-bottom:14px"><span>SOP :</span><span>FORM PENGIRIMAN BARANG / SURAT JALAN</span></div>
+return `<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px"><b style="font-size:17px;color:var(--ac)">SURAT JALAN</b><button data-sj="pr" style="display:inline-flex;gap:6px;align-items:center">${ico("printer")} Cetak</button></div>
 <div class="box"><div style="margin-bottom:10px"><b style="color:var(--ac)">${sjei?"EDIT":"INPUT"} SURAT JALAN</b> <span style="font-size:12px;color:var(--mu)">No. ${sjei?"":"otomatis: "}<span id="sjno">${esc(cur0?cur0.no:sjNo(f.tgl))}</span></span></div>
 <div class="form"><label>Tanggal<input type="date" data-sf="tgl" value="${qa(f.tgl)}"></label>${L("Proyek / customer","proyek",'list="dl_sjp"')}${L("Alamat tujuan","alamat")}${L("Nama penerima","penerima")}${L("Driver / pengirim","driver")}${L("No. kendaraan","kendaraan")}</div>
 <datalist id="dl_sjp">${projNames().map(n=>`<option value="${qa(n)}">`).join("")}</datalist><datalist id="dl_sjb">${matNames().map(n=>`<option value="${qa(n)}">`).join("")}</datalist>
@@ -490,6 +491,7 @@ else if(a==="save"){if(!(sjf.proyek||"").trim()){alert("Isi proyek / customer du
 const x=JSON.parse(JSON.stringify(sjf));x.items=its;if(sjei){const i=S.sj.findIndex(y=>y.id===sjei);x.id=sjei;x.no=S.sj[i].no;S.sj[i]=x}else{x.id=uid();x.no=sjNo(x.tgl);S.sj.push(x)}sjf=newSJ();sjei=null}
 else if(a==="cancel"){sjf=newSJ();sjei=null}
 else if(a==="p"&&r){printSJ(r);return}
+else if(a==="pr"){printSJ(sjCur());return}
 else if(a==="e"&&r){sjf=JSON.parse(JSON.stringify(r));while(sjf.items.length<3)sjf.items.push({});sjei=r.id;scrollTo(0,0)}
 else if(a==="d"&&r){if(!confirm("Hapus surat jalan ini?"))return;S.sj=S.sj.filter(x=>x!==r);if(sjei===id){sjf=newSJ();sjei=null}}
 else return;
