@@ -77,7 +77,7 @@
   function fail(r) {
     return r.text().then(function (t) {
       var m = ""; try { var j = JSON.parse(t); m = j.message || j.error || ""; } catch (e) {}
-      if (r.status === 404 || /bucket not found/i.test(m)) m = "Bucket 'penawaran' belum dibuat. Jalankan supabase/penawaran.sql.";
+      if (r.status === 404 || /bucket not found/i.test(m)) m = "Bucket 'penawaran' belum dibuat. Jalankan supabase/setup.sql.";
       else if (r.status === 401 || r.status === 403 || /row-level security/i.test(m)) m = "Tidak punya izin (hanya admin yang boleh mengunggah).";
       throw new Error(m || ("HTTP " + r.status));
     });
