@@ -7,3 +7,7 @@ window.JALUR_CONFIG = {
   LOCAL_MODE: false,    // true = tanpa login & tanpa server (HANYA untuk uji coba di komputer sendiri)
   AUTOSAVE_MS: 2500     // jeda sebelum perubahan dikirim ke server
 };
+window.CONFIG = {
+  SUPABASE_URL: 'https://tksllvclvbqsrayvbiij.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_Dn-6rlkCHiszK0KHZEpzDg_QHHV6DMi'   // anon key saja, bukan service_role
+};
