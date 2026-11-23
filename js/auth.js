@@ -1,7 +1,12 @@
-/* ============ AKSES MASUK: ADMIN & STAFF + SINKRON KE GOOGLE APPS SCRIPT ============ */
+/* ============ AKSES MASUK: ADMIN & STAFF + DATA DI SUPABASE ============
+   Login : Supabase Auth. Username diubah jadi email internal (username@EMAIL_DOMAIN di config.js).
+   Role  : tabel public.profiles (admin / staff).
+   Data  : tabel public.app_state (1 baris; kolom "data" berisi seluruh data aplikasi).
+   File  : Supabase Storage bucket "penawaran" (dipakai js/penawaran.js).
+   Setup database: jalankan supabase/setup.sql satu kali di Supabase → SQL Editor. */
 (function () {
   "use strict";
-  var C = window.JALUR_CONFIG || {}, SK = "jalur_session";
+  var C = window.JALUR_CONFIG || {};
   var $ = function (id) { return document.getElementById(id); };
   // Menu yang boleh dibuka staff (id menu di sidebar). Admin boleh semuanya.
   // Staff HANYA MELIHAT (tidak bisa menambah/mengubah/menghapus) di semua menu ini.
@@ -25,22 +30,28 @@
       clearTimeout(timer); timer = setTimeout(push, C.AUTOSAVE_MS || 2500);
     },
     get session() { return sess; },
-    token: function () { return Promise.resolve(sess && sess.token); }   // dipakai js/penawaran.js
+    // Token login Supabase (JWT) — dipakai js/penawaran.js untuk Storage. Diperbarui otomatis oleh supabase-js.
+    token: function () {
+      if (!window.db) return Promise.resolve(null);
+      return window.db.auth.getSession().then(function (r) {
+        var s = r && r.data && r.data.session;
+        return s ? s.access_token : null;
+      });
+    }
   };
 
   function stat(t) { var e = $("wstat"); if (e) e.textContent = t; }
   function showLogin(msg) { $("login").style.display = "flex"; $("who").hidden = true; $("lerr").textContent = msg || ""; setTimeout(function () { $("lu").focus(); }, 50); }
   function hideLogin() { $("login").style.display = "none"; }
 
-  function api(action, body) {
-    if (!C.GAS_URL) return Promise.reject(new Error("GAS_URL belum diisi di js/config.js"));
-    return fetch(C.GAS_URL, {
-      method: "POST", redirect: "follow",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(Object.assign({ action: action }, body || {}))
-    }).then(function (r) {
-      if (!r.ok) throw new Error("Server menjawab " + r.status);
-      return r.json();
+  function toEmail(u) { return String(u).trim().toLowerCase() + "@" + (C.EMAIL_DOMAIN || "jalur.local"); }
+
+  // Ambil nama & role dari tabel profiles
+  function loadProfile(user) {
+    return window.db.from("profiles").select("username,nama,role").eq("id", user.id).maybeSingle().then(function (r) {
+      if (r.error) throw new Error(r.error.message || "Gagal membaca profil");
+      if (!r.data) throw new Error("Akun ini belum terdaftar di tabel profiles. Hubungi admin.");
+      return r.data;
     });
   }
 
@@ -58,6 +69,7 @@
   // ===== MODE HANYA-LIHAT untuk staff =====
   // Menyembunyikan form & tombol tambah/ubah/hapus, mengunci isian, dan memblokir klik yang mengubah data.
   // Tombol "Cetak", tombol kembali (←), membuka folder, dan kolom pencarian tetap berfungsi.
+  // (Pengamanan sebenarnya ada di database: staff tidak punya izin menulis — lihat supabase/setup.sql.)
   function applyReadOnly() {
     var st = document.createElement("style");
     st.textContent = "body.ro #mn .box:has(.form){display:none!important}body.ro #mn button.ic{display:none!important}";
@@ -91,7 +103,6 @@
 
   function startSession(s) {
     sess = s;
-    try { sessionStorage.setItem(SK, JSON.stringify(s)); } catch (e) {}
     applyRole();
     $("wtxt").textContent = s.nama + " · " + (s.role === "admin" ? "Admin" : "Staff");
     $("who").hidden = false;
@@ -101,11 +112,17 @@
     try { Object.keys(MD).forEach(function (k) { MS[k] = { f: newMF(k), ei: -1, q: "" }; }); } catch (e) {}
   }
 
+  // Muat data dari Supabase
   function pull() {
-    return api("load", { token: sess.token }).then(function (j) {
-      if (!j.ok) { var er = new Error(j.error || "Gagal memuat data"); er.auth = j.code === "auth"; throw er; }
-      if (j.data) {
-        S = lengkapi(j.data);
+    return window.db.from("app_state").select("data").eq("id", 1).maybeSingle().then(function (r) {
+      if (r.error) {
+        var er = new Error(r.error.message || "Gagal memuat data");
+        er.auth = r.status === 401;   // token tidak valid / kedaluwarsa
+        throw er;
+      }
+      var d = r.data && r.data.data;
+      if (d && typeof d === "object" && Object.keys(d).length) {
+        S = lengkapi(d);
         try { localStorage.setItem("crm1", JSON.stringify(S)); } catch (e) {}
         resetForms();
         stat("Data dimuat dari server");
@@ -115,15 +132,22 @@
           S = lengkapi({}); resetForms();
         }
         dirty = true; return push();
+      } else {
+        stat("Server masih kosong");
       }
     });
   }
 
+  // Kirim data ke Supabase (hanya admin yang diizinkan oleh database)
   function push() {
     if (!sess || busy || !dirty) return Promise.resolve();
     busy = true; dirty = false;
-    return api("save", { token: sess.token, data: S }).then(function (j) {
-      if (!j.ok) { if (j.code === "auth") { dirty = true; expired(); return; } throw new Error(j.error); }
+    return window.db.from("app_state").upsert({ id: 1, data: S }).then(function (r) {
+      if (r.error) {
+        if (r.status === 401) { dirty = true; expired(); return; }
+        if (r.status === 403 || r.error.code === "42501") { dirty = true; stat("Tidak punya izin menyimpan"); return; }
+        throw new Error(r.error.message);
+      }
       stat("Tersimpan ✓ " + new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }));
     }).catch(function () {
       dirty = true; stat("Gagal sinkron, dicoba lagi…");
@@ -132,7 +156,8 @@
   }
 
   function expired() {
-    sess = null; try { sessionStorage.removeItem(SK); } catch (e) {}
+    sess = null;
+    try { window.db.auth.signOut({ scope: "local" }); } catch (e) {}
     showLogin("Sesi habis, silakan masuk lagi.");
   }
 
@@ -142,13 +167,23 @@
     ev.preventDefault();
     var b = $("lb"), u = $("lu").value.trim();
     b.disabled = true; $("lerr").textContent = "";
-    api("login", { username: u, password: $("lp").value }).then(function (j) {
-      if (!j.ok) throw new Error(j.error || "Login gagal");
+    Promise.resolve().then(function () {
+      if (!window.db) throw new Error("Supabase belum siap. Periksa koneksi internet lalu muat ulang halaman.");
+      return window.db.auth.signInWithPassword({ email: toEmail(u), password: $("lp").value });
+    }).then(function (r) {
+      if (r.error) {
+        throw new Error(/invalid login|invalid_credentials/i.test(r.error.message + " " + (r.error.code || ""))
+          ? "Username atau password salah" : r.error.message);
+      }
       $("lp").value = "";
-      startSession({ token: j.token, role: j.role, nama: j.nama || u, u: u.toLowerCase() });
+      return loadProfile(r.data.user).then(function (p) {
+        startSession({ role: p.role, nama: p.nama || u, u: (p.username || u).toLowerCase() });
+      });
+    }).then(function () {
       return dirty ? push().then(pull) : pull();
     }).then(enter).catch(function (e) {
-      sess = null; try { sessionStorage.removeItem(SK); } catch (x) {}
+      sess = null;
+      try { window.db.auth.signOut({ scope: "local" }); } catch (x) {}
       $("who").hidden = true; $("lerr").textContent = e.message || "Gagal masuk";
     }).then(function () { b.disabled = false; });
   });
@@ -156,9 +191,8 @@
   $("wout").addEventListener("click", function () {
     if (!sess) return;
     var done = function () {
-      var t = sess && sess.token;
-      (t ? api("logout", { token: t }).catch(function () {}) : Promise.resolve()).then(function () {
-        try { sessionStorage.removeItem(SK); localStorage.removeItem("crm1"); } catch (e) {}
+      Promise.resolve(window.db && window.db.auth.signOut()).catch(function () {}).then(function () {
+        try { localStorage.removeItem("crm1"); } catch (e) {}
         location.reload();
       });
     };
@@ -184,15 +218,22 @@
     $("wtxt").textContent = "Mode lokal (tanpa server)"; $("who").hidden = false; $("wout").hidden = true;
     return;
   }
-  var saved = null;
-  try { saved = JSON.parse(sessionStorage.getItem(SK)); } catch (e) {}
-  if (saved && saved.token) {
-    startSession(saved);
-    pull().then(enter).catch(function (e) {
-      if (e.auth) expired();
-      else { stat("Offline, memakai data di perangkat ini"); enter(); }
-    });
-  } else {
-    showLogin(C.GAS_URL ? "" : "Server belum disetel. Isi GAS_URL di js/config.js (lihat README).");
+  if (!window.db) {
+    showLogin(C.SUPABASE_URL && C.SUPABASE_ANON_KEY
+      ? "Supabase belum siap. Periksa koneksi internet lalu muat ulang halaman."
+      : "Server belum disetel. Isi SUPABASE_URL dan SUPABASE_ANON_KEY di js/config.js.");
+    return;
   }
+  // Pulihkan sesi login yang masih aktif (selama tab belum ditutup)
+  window.db.auth.getSession().then(function (r) {
+    var s = r && r.data && r.data.session;
+    if (!s) { showLogin(""); return; }
+    return loadProfile(s.user).then(function (p) {
+      startSession({ role: p.role, nama: p.nama || p.username, u: (p.username || "").toLowerCase() });
+      return pull().then(enter).catch(function (e) {
+        if (e.auth) expired();
+        else { stat("Offline, memakai data di perangkat ini"); enter(); }
+      });
+    }, function () { showLogin("Sesi tidak valid, silakan masuk lagi."); });
+  });
 })();
