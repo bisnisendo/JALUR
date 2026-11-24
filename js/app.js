@@ -215,12 +215,12 @@ L.forEach(r=>{const t=tm(r.nama);if(!t){sk++;return}S.lem.push({tgl:r.tgl,nama:t
 if(na+nl>0){save();render()}
 if(!silent)alert(na+nl+sk?`Selesai: ${na} absen dan ${nl} lembur masuk`+(sk?`, ${sk} dilewati (nama belum cocok)`:'')+'.':'Tidak ada data baru dari HP.')}
 let hpBusy=false,hpLast=0;
-function tarikHP(b,silent){const C=window.JALUR_CONFIG||{},J=window.JALUR;
-if(!C.GAS_URL){if(!silent)alert('GAS_URL belum diisi di js/config.js');return}
+function tarikHP(b,silent){const J=window.JALUR;
+if(!window.db){if(!silent)alert('Supabase belum siap. Muat ulang halaman.');return}
 if(!J||!J.session||J.session.role!=='admin'){if(!silent)alert('Hanya admin yang bisa menarik absen dari HP');return}
 if(hpBusy)return;hpBusy=true;hpLast=Date.now();
 const o=b?b.textContent:'';if(b){b.disabled=true;b.textContent='Menarik…'}
-J.token().then(t=>fetch(C.GAS_URL,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'absenTarik',token:t,sejak:iso(add(D(today()),-45))})})).then(r=>{if(!r.ok)throw new Error('Server menjawab '+r.status);return r.json()}).then(j=>{if(!j.ok)throw new Error(j.code==='auth'?'Sesi habis atau bukan admin, muat ulang halaman lalu masuk lagi':(j.error||'Gagal'));mergeHP(j,silent)}).catch(e=>{if(!silent)alert('Gagal menarik absen HP: '+e.message)}).then(()=>{hpBusy=false;if(b){b.disabled=false;b.textContent=o}})}
+Promise.resolve(window.db.from('absen_hp').select('id,jenis,nama,tgl,jam,proyek,kegiatan,lama,lat,lng,alamat').gte('tgl',iso(add(D(today()),-45))).order('created_at',{ascending:false}).limit(1000)).then(r=>{if(r.error)throw new Error(r.status===401?'Sesi habis atau bukan admin, muat ulang halaman lalu masuk lagi':(r.error.message||'Gagal'));const d=(r.data||[]).reverse();mergeHP({absen:d.filter(x=>x.jenis==='absen'),lembur:d.filter(x=>x.jenis==='lembur')},silent)}).catch(e=>{if(!silent)alert('Gagal menarik absen HP: '+e.message)}).then(()=>{hpBusy=false;if(b){b.disabled=false;b.textContent=o}})}
 function autoHP(){if(cur==='absensi'&&Date.now()-hpLast>90000)tarikHP(null,true)}
 setInterval(autoHP,120000);
 function rgrid(){const td=today(),T0=mw(am)[0],ds=[...Array(span)].map((_,i)=>add(T0,i));
