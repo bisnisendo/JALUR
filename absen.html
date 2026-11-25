@@ -74,22 +74,26 @@ textarea{resize:vertical;min-height:72px}
 </div>
 
 <script src="js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
 <script>
 (function () {
   "use strict";
   var C = window.JALUR_CONFIG || {}, mode = 1, token = "", expAt = 0, tick = null, $ = function (id) { return document.getElementById(id); };
 
-  function post(action, body) {
-    if (!C.GAS_URL) return Promise.reject(new Error("Server belum disetel"));
-    var ctl = window.AbortController ? new AbortController() : null, t = setTimeout(function () { if (ctl) ctl.abort(); }, 30000);
-    return fetch(C.GAS_URL, {
-      method: "POST", redirect: "follow", headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(Object.assign({ action: action }, body || {})), signal: ctl ? ctl.signal : undefined
-    }).then(function (r) { clearTimeout(t); if (!r.ok) throw new Error("Server menjawab " + r.status); return r.json(); });
+  // Panggil fungsi database Supabase (absen_masuk / absen_kirim). Batas waktu 30 detik.
+  function rpc(fn, args) {
+    if (!window.db) return Promise.reject(new Error("Server belum disetel"));
+    var tm, limit = new Promise(function (_, rej) { tm = setTimeout(function () { var e = new Error("timeout"); e.name = "AbortError"; rej(e); }, 30000); });
+    return Promise.race([Promise.resolve(window.db.rpc(fn, args)), limit]).then(function (r) {
+      clearTimeout(tm);
+      if (r.error) { var m = String(r.error.message || ""); throw new Error(/failed to fetch|load failed|networkerror/i.test(m) ? "Failed to fetch" : (m || "Terjadi kesalahan")); }
+      return r.data || {};
+    }, function (e) { clearTimeout(tm); throw e; });
   }
   function netErr(e) {
     if (e && e.name === "AbortError") return "Koneksi lambat. Coba lagi.";
-    if (e && e.message === "Failed to fetch") return "Tidak ada koneksi internet. Coba lagi.";
+    if (e && /failed to fetch|load failed|networkerror/i.test(e.message || "")) return "Tidak ada koneksi internet. Coba lagi.";
     return (e && e.message) || "Terjadi kesalahan";
   }
 
@@ -127,8 +131,9 @@ textarea{resize:vertical;min-height:72px}
     var n = $("ln").value.trim(), b = $("lb");
     if (n.length < 2) { $("le").textContent = "Tulis nama Anda."; return; }
     b.disabled = true; b.textContent = "Memeriksa…"; $("le").textContent = "";
-    post("absenMasuk", { nama: n }).then(function (j) {
-      if (!j.ok || !j.token) throw new Error(j.error || "Nama tidak terdaftar");
+    rpc("absen_masuk", { p_nama: n }).then(function (j) {
+      if (!j.ok || !j.nama) throw new Error(j.error || "Nama tidak terdaftar");
+      j.token = j.nama;   // sesi hanya di halaman ini; nama resmi dipakai lagi (dan diperiksa ulang server) saat mengirim
       showForm(j);
     }).catch(function (e) { $("le").textContent = netErr(e); })
       .then(function () { b.disabled = false; b.textContent = "Masuk"; });
@@ -172,7 +177,11 @@ textarea{resize:vertical;min-height:72px}
     b.disabled = true; b.textContent = "Mengirim…";
     lokasi().then(function (l) {
       if (l) { d.lat = l.lat; d.lng = l.lng; d.acc = l.acc; }
-      return post(mode === 1 ? "absenKirim" : "absenLembur", d);
+      return rpc("absen_kirim", {
+        p_nama: token, p_jenis: mode === 1 ? "absen" : "lembur", p_proyek: d.proyek, p_kegiatan: d.kegiatan,
+        p_lama: mode === 2 ? Number(String(d.lama).replace(",", ".")) : null,
+        p_lat: d.lat == null ? null : d.lat, p_lng: d.lng == null ? null : d.lng, p_web: d.web
+      });
     }).then(function (j) {
       if (!j.ok) { var e = new Error(j.error || "Gagal menyimpan"); e.keluar = j.code === "nama" || j.code === "sesi"; throw e; }
       try { localStorage.setItem("absen_proyek", d.proyek); } catch (x) {}
